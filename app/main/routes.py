@@ -4,6 +4,7 @@ import traceback
 # local imports
 from app import logger, csrf
 from app.models import Transactions
+from .functions import find_and_replace, update_spreadsheet
 from flask import Blueprint, render_template, request, jsonify
 
 main = Blueprint("main", __name__)
