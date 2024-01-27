@@ -138,17 +138,42 @@
                               <option value="Alto">Alto</option>
                               <option value="Tenor">Tenor</option>
                               <option value="Bass">Bass</option>
+                              <option value="Donation">Donation</option>
                             </select>
                           </div>
                         </div>
                         <div class="col-md-12">
-                          <div id="name-div" class="form-group">
+                          <div
+                            id="name-div"
+                            class="form-group autocomplete ld-over"
+                          >
+                            <div
+                              class="ld ld-ring ld-spin"
+                              style="font-size: 1.5rem"
+                            ></div>
                             <input
                               type="text"
                               class="form-control"
                               name="name"
                               id="name"
                               placeholder="Name"
+                              required
+                            />
+                            <div
+                              class="autocomplete-items"
+                              id="autocompleteItems"
+                              hidden
+                            ></div>
+                          </div>
+                        </div>
+                        <div class="col-md-12">
+                          <div class="form-group">
+                            <input
+                              type="text"
+                              class="form-control"
+                              name="reg_no"
+                              id="reg_no"
+                              placeholder="Reg NO"
                               required
                             />
                           </div>

@@ -1,5 +1,7 @@
 # python imports
 import os
+import json
+import string
 
 # installed imports
 import gspread
@@ -7,12 +9,12 @@ from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
 
 # local imports
-from . import logger
+from app import logger
 
 load_dotenv()
 
 spreadsheet_id = os.getenv("SPREADSHEET_ID")
-google_credentials_file = os.getenv("CREDENTIALS_FILE")
+google_credentials_file = json.loads(os.getenv("CREDENTIALS_FILE"))
 
 # Set up the scope for accessing Google Sheets
 scope = [
@@ -20,13 +22,25 @@ scope = [
     "https://www.googleapis.com/auth/drive",
 ]
 # Authenticate with Google Sheets
-creds = ServiceAccountCredentials.from_json_keyfile_name(google_credentials_file, scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(google_credentials_file, scope)
 client = gspread.authorize(creds)
 # get spreadsheet
 spreadsheet = client.open_by_key(spreadsheet_id)
 
 
-def update_spreadsheet(data: dict, sheetname: str, check_column: str, sort_column: str):
+def get_last_column_letter(sheet):
+    # Get all values in the first row (headers)
+    header_row = sheet.row_values(1)
+
+    # Find the index of the last non-empty cell in the first row
+    last_non_empty_index = len(header_row) - header_row[::-1].index(next(filter(None, reversed(header_row)))) - 1
+
+    # Convert the index to a column letter
+    last_column_letter = string.ascii_uppercase[last_non_empty_index]
+
+    return last_column_letter
+
+def add_record(data: dict, sheetname: str, check_column: str = "Reg Number", sort_column: str = "Name", donation = False):
     # Get worksheet
     if sheetname not in [worksheet.title for worksheet in spreadsheet.worksheets()]:
         worksheet = spreadsheet.add_worksheet(sheetname, rows=100, cols=20)
@@ -42,13 +56,14 @@ def update_spreadsheet(data: dict, sheetname: str, check_column: str, sort_colum
         logger.info(f"Updating header")
         worksheet.update("A1", [header])
 
-    # Get all values in the specified check column
-    check_column_values = worksheet.col_values(header.index(check_column) + 1)
+    if not donation:
+        # Get all values in the specified check column
+        check_column_values = worksheet.col_values(header.index(check_column) + 1)
 
-    # Check if the specified value in the input data is already in the check column
-    if data[check_column] in check_column_values:
-        logger.info(f"Record with '{check_column}' equal to '{data[check_column]}' already exists.")
-        return False, "duplicate"
+        # Check if the specified value in the input data is already in the check column
+        if data[check_column] in check_column_values:
+            logger.info(f"Record with '{check_column}' equal to '{data[check_column]}' already exists.")
+            return False
 
     # Append the row to the worksheet
     values = list(data.values())
@@ -56,9 +71,11 @@ def update_spreadsheet(data: dict, sheetname: str, check_column: str, sort_colum
 
     # Sort the rows alphabetically based on the specified sort column
     sort_column_index = header.index(sort_column) + 1
-    worksheet.sort(sort_column_index, True)  # Set the second parameter to False for descending order
+    last_column_letter = get_last_column_letter(worksheet)
+    last_row_index = worksheet.row_count
+    worksheet.sort((sort_column_index, "asc"), range=f"A2:{last_column_letter}{last_row_index}")
 
-    return True, "successful."
+    return True
 
 
 
@@ -97,3 +114,14 @@ def find_and_replace(
     # Replace the value in the specified cell
     return worksheet.update_cell(row_index, column_index, int(new_value) + int(current_value))
 
+
+def get_data_from_worksheet(sheetname: str):
+    if sheetname not in [worksheet.title for worksheet in spreadsheet.worksheets()]:
+        worksheet = spreadsheet.add_worksheet(sheetname, rows=100, cols=20)
+    else:
+        worksheet = spreadsheet.worksheet(sheetname)
+    
+    data_range = worksheet.get_all_values()[1:]  # Exclude the header row
+    data = [(row[0], row[1]) for row in data_range]
+
+    return data

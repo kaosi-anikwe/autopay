@@ -1,22 +1,23 @@
 var names = [];
 var donate = false;
 
-function handleInput() {
+const handleInput = () => {
   // Get the input value
   const input = document.getElementById("name").value.toLowerCase();
 
   // Filter the data based on the input
+  const checkNames = names.map((name) => name[0]);
   const filteredData = input
-    ? names.filter(function (item) {
+    ? checkNames.filter(function (item) {
         return item.toLowerCase().includes(input);
       })
     : [];
 
   // Display the filtered data as autocomplete items
   displayAutocompleteItems(filteredData);
-}
+};
 
-function displayAutocompleteItems(items) {
+const displayAutocompleteItems = (items) => {
   const autocompleteItemsContainer =
     document.getElementById("autocompleteItems");
 
@@ -39,7 +40,7 @@ function displayAutocompleteItems(items) {
     };
     autocompleteItemsContainer.appendChild(box);
   });
-}
+};
 
 document.getElementById("paymentForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -48,8 +49,9 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
   try {
     if (!donate) {
       const input = document.getElementById("name").value.toLowerCase();
+      const checkNames = names.map((name) => name[0]);
       const filteredData = input
-        ? names.filter(function (item) {
+        ? checkNames.filter(function (item) {
             return item.toLowerCase().includes(input);
           })
         : [];
@@ -67,7 +69,6 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
     const fee_type = document.getElementById("fee_type").value;
     const donation = document.getElementById("donate").checked;
     let payload = { part, name, amount, fee_type, donation };
-    console.log(payload);
     let response = await fetch("/tx_ref", {
       method: "POST",
       headers: {
@@ -94,7 +95,6 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       ) {
         e.target.submit();
         submitBtn.disabled = true;
-        console.log("form submitted");
       }
     } else {
       alert("Something went wrong. Please refresh the page and try again.");
@@ -111,10 +111,10 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
 
 const getNames = async () => {
   const nameDiv = document.getElementById("name-div");
+  document.getElementById("name").value = "";
   try {
     nameDiv.classList.toggle("running");
     const part = document.getElementById("part").value;
-    console.log(part);
     let response = await fetch(`/names?part=${part}`);
     if (response.ok) {
       let data = await response.json();
