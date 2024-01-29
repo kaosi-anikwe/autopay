@@ -19,6 +19,12 @@
     />
 
     <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap"
+      rel="stylesheet"
+      type="text/css"
+    />
+
+    <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
     />
@@ -64,7 +70,9 @@
         <div class="row justify-content-center">
           <div class="col-md-6 text-center mb-4">
             <h2 class="heading-section">
-              <a class="text-white" href="{{ url_for('main.index') }}"
+              <a
+                class="text-white font-weight-bold"
+                href="{{ url_for('main.index') }}"
                 >Catholic Students' Choir</a
               >
             </h2>
@@ -76,13 +84,16 @@
               <div class="row no-gutters justify-content-between">
                 <div class="col-lg-6 d-flex align-items-stretch">
                   <div class="info-wrap w-100 p-5">
-                    <h3 class="mb-4">Fusion Cantus 4.0</h3>
+                    <h3 id="page-title" class="mb-4 h3">Fusion Cantus 4.0</h3>
                     <div class="dbox w-100 d-flex align-items-start">
                       <div class="text">
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur adipisicing
-                          elit. Quaerat consequuntur officiis vitae odio debitis
-                          nam optio quas maxime rem unde.
+                        <p id="page-info">
+                          Every year, the Catholic Students' Choir comes
+                          together to host an uplifting concert that unites the
+                          community through the power of faith-infused music.
+                          The event serves as a source of inspiration, fostering
+                          a spirit of togetherness and spiritual warmth among
+                          all who attend.
                         </p>
                       </div>
                     </div>
@@ -126,5 +137,10 @@
         </div>
       </div>
     </section>
+    <script>
+      // prettier-ignore
+      let pageInfo = JSON.parse('{{ page_info | tojson }}');
+    </script>
+    <script src="{{ url_for('static', filename='js/index.js')}}"></script>
   </body>
 </html>

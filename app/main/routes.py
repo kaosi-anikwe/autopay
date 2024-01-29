@@ -72,7 +72,7 @@ def get_tx_ref():
 def thanks():
     message = request.args.get("message")
     link_mssg = request.args.get("link_mssg")
-    title = "Thank you ❤️✨" if "thank" in message else "Sorry 😕"
+    title = "Thank you ❤️✨" if "thank" in message.lower() else "Sorry 😕"
     return render_template(
         "thanks.html", message=message, link_mssg=link_mssg, title=title
     )

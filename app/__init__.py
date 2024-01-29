@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import logging
 from flask import Flask
@@ -52,5 +53,12 @@ def create_app(config=Config):
     def choose_bg():
         images = os.listdir(os.path.join(app.static_folder, "images"))
         return {"bg_img": random.choice(images)}
+    
+    # add page info
+    @app.context_processor
+    def add_page_info():
+        with open("page_info.json") as page_file:
+            page_data = json.load(page_file)
+            return {"page_info": page_data}
 
     return app

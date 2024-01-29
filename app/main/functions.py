@@ -34,8 +34,6 @@ gclient = gspread.authorize(creds)
 with open("sheets.json") as sheets_data:
     sheets = json.load(sheets_data)["sheets"]
 
-logger.info(f"SPREADSHEETS: {sheets}")
-
 
 def get_last_column_letter(sheet):
     # Get all values in the first row (headers)
