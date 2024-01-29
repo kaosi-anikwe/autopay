@@ -1,6 +1,7 @@
 # python imports
 import os
 import json
+import time
 import traceback
 from datetime import datetime
 
@@ -12,7 +13,12 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 # local imports
 from app import logger, csrf
 from app.models import Transactions
-from .functions import find_and_replace, add_record, get_data_from_worksheet
+from .functions import (
+    find_and_replace,
+    add_record,
+    get_data_from_worksheet,
+    file_upload,
+)
 
 main = Blueprint("main", __name__)
 
@@ -33,10 +39,11 @@ def index():
 @main.get("/names")
 def get_names():
     try:
-        part = request.args.get("part", "Soprano")
-        logger.info(f"Getting names for {part}")
+        part = request.args.get("part")
+        fee_type = request.args.get("fee_type")
+        logger.info(f"Getting names for {fee_type} {part}")
 
-        names = get_data_from_worksheet(part)
+        names = get_data_from_worksheet(part, fee_type)
 
         return jsonify(names=names)
     except Exception as e:
@@ -49,37 +56,32 @@ def get_tx_ref():
     try:
         logger.info(f"Generating tx_ref")
         data = request.get_json()
-        part = data.get("part")
-        name = data.get("name")
-        amount = int(data.get("amount"))
-        fee_type = data.get("fee_type", "fusion-cantus")
         donation = bool(data.get("donation", False))
-        if not part or not name or not amount:
-            return jsonify(error="Specify name and part"), 400
+        part = data.get("part") if not donation else "dont"
 
-        names = get_data_from_worksheet(part)
-        reg_no = [info[1] for info in names if info[0] == name][0]
+        tx_ref = Transactions.get_tx_ref(part)
 
-        transaction = Transactions(
-            name=name,
-            reg_no=reg_no,
-            part=part,
-            fee_type=fee_type,
-            amount=amount,
-            donation=donation,
-        )
-        transaction.insert()
-        logger.info(f"TX_REF: {transaction.tx_ref}")
-        return jsonify(tx_ref=transaction.tx_ref)
+        logger.info(f"TX_REF: {tx_ref}")
+        return jsonify(tx_ref=tx_ref)
     except Exception as e:
         logger.error(traceback.format_exc())
         return jsonify(message="Error getting tx_ref", error=str(e)), 500
 
 
+@main.get("/thanks")
+def thanks():
+    message = request.args.get("message")
+    link_mssg = request.args.get("link_mssg")
+    title = "Thank you ❤️✨" if "thank" in message else "Sorry 😕"
+    return render_template(
+        "thanks.html", message=message, link_mssg=link_mssg, title=title
+    )
+
+
 # ADMIN ROUTES ---------------------
 @main.get("/admin")
 def admin():
-    return render_template("admin.html")
+    return render_template("admin.html", title="Admin Portal")
 
 
 @main.post("/add-name")
@@ -87,18 +89,23 @@ def add_name():
     try:
         form = request.form
         logger.info(f"ADDING NAME WITH DATA: {form}")
-        name = form.get("name")
+        name_file = request.files.get("name-file")
         fee_type = form.get("fee_type")
+        if name_file:
+            file_upload(name_file, fee_type)
+        name = form.get("name")
         part = form.get("part")
         reg_no = form.get("reg_no")
-        data = {
-            "Name": name.upper(),
-            "Reg Number": reg_no,
-            "Paid": 0,
-        }
-        if add_record(data, part):
-            return jsonify(success=True)
-        raise Exception("Failed to add record")
+        if name and reg_no:
+            data = {
+                "Name": name.upper(),
+                "Reg Number": reg_no,
+                "Paid": 0,
+            }
+            if add_record(data, sheetname=part, fee_type=fee_type):
+                return jsonify(success=True)
+            raise Exception("Failed to add record")
+        return jsonify(success=True)
     except Exception as e:
         logger.error(traceback.format_exc())
         return jsonify(error=str(e)), 500
@@ -115,32 +122,34 @@ def add_payment():
         fee_type = data.get("fee_type")
         reg_no = data.get("reg_no")
         donation = bool(data.get("donation"))
+        tx_ref = Transactions.get_tx_ref(part)
 
         transaction = Transactions(
             name=name,
+            amount=amount,
+            fee_type=fee_type,
+            donation=donation,
             reg_no=reg_no,
             part=part,
-            fee_type=fee_type,
-            amount=amount,
-            donation=donation,
+            tx_ref=tx_ref,
         )
         transaction.insert()
         logger.info(f"TX_REF: {transaction.tx_ref}")
         # update speadsheet
         if not donation:
             find_and_replace(
+                fee_type=fee_type,
                 sheetname=part,
                 identify_col="Reg Number",
                 identify_value=reg_no,
                 column_name="Paid",
-                new_value=amount
+                new_value=amount,
             )
         else:
-            donor_data = {
-                "Name": name,
-                "Paid": amount
-            }
-            add_record(donor_data, "Donations", donation=True)
+            donor_data = {"Name": name, "Paid": amount}
+            add_record(
+                donor_data, sheetname="Donations", fee_type=fee_type, donation=True
+            )
         return jsonify(success=True)
     except Exception as e:
         logger.error(traceback.format_exc())
@@ -151,6 +160,7 @@ def add_payment():
 @main.post("/payment-webhook")
 @csrf.exempt
 def payment_webhook():
+    time.sleep(10)  # delay to avoid concurrent request with callback
     if request.headers.get("verif-hash") == RAVE_SEC_KEY:
         try:
             payload = request.get_json()
@@ -167,18 +177,15 @@ def payment_webhook():
                 json.dump(payload, file)
 
             # get transaction details from payload
-            status = payload["data"]["status"]
-            tx_ref = payload["data"]["tx_ref"]
-            flw_tx_id = payload["data"]["id"]
-            flw_tx_ref = payload["data"]["flw_ref"]
-            reg_no = str(tx_ref).split("-")[1]
+            status = payload["status"]
+            tx_ref = payload["txRef"]
+            flw_tx_id = payload["id"]
 
             # get transaction details from database
             tx = Transactions.query.filter(
                 Transactions.tx_ref == tx_ref,
-                Transactions.status == "pending",
             ).one_or_none()
-            if tx:  # transaction found
+            if not tx:  # new transaciton
                 # get transaction status
                 if status == "successful":
                     verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
@@ -194,63 +201,81 @@ def payment_webhook():
                         if response.status_code == 200:
                             data = response.json()
                             if data["status"] == "success":
+                                # create transaction
+                                flw_tx_ref = data["data"]["flw_ref"]
+                                name = data["data"]["customer"]["name"]
+                                amount = data["data"]["amount"]
+                                fee_type = data["data"]["meta"]["fee_type"]
+                                donation = donation = (
+                                    True
+                                    if data["data"]["meta"]["donation"] == "true"
+                                    else False
+                                )
+                                part = data["data"]["meta"]["part"]
+                                reg_no = None
+                                if not donation:
+                                    name_list = get_data_from_worksheet(part, fee_type)
+                                    reg_no = [
+                                        record[1]
+                                        for record in name_list
+                                        if record[0].strip() == name.strip()
+                                    ][0]
+                                tx = Transactions(
+                                    name=name,
+                                    amount=amount,
+                                    fee_type=fee_type,
+                                    donation=donation,
+                                    reg_no=reg_no,
+                                    part=part,
+                                    tx_ref=tx_ref,
+                                )
+                                tx.insert()
                                 # update record as successful
-                                if (
-                                    tx.status != "completed"
-                                ):  # transaction was pending
-                                    tx.status = "completed"
-                                    tx.flw_tx_id = flw_tx_id
-                                    tx.flw_tx_ref = flw_tx_ref
-                                    tx.update()
-                                    # update spreadsheet
-                                    part = tx_ref.split("-")[0]
-                                    part = str(part).capitalize() if "dont" not in part.lower() else "Donation"
-                                    if not tx.donation:
-                                        find_and_replace(
-                                            sheetname=part,
-                                            identify_col="Reg Number",
-                                            identify_value=reg_no,
-                                            column_name="Paid",
-                                            new_value=tx.amount
-                                        )
-                                    else:
-                                        donor_data = {
-                                            "Name": tx.name,
-                                            "Paid": tx.amount
-                                        }
-                                        add_record(donor_data, "Donations", donation=True)
-                                elif tx.status == "completed":
+                                tx.status = "completed"
+                                tx.flw_tx_id = flw_tx_id
+                                tx.flw_tx_ref = flw_tx_ref
+                                tx.update()
+                                # update spreadsheet
+                                if not tx.donation:
                                     logger.info(
-                                        f"TX #{tx.flw_tx_id} ALREADY VERIFIED"
+                                        f"UPDATING BALANCE FOR {name}. ADDING {amount}"
                                     )
-
+                                    find_and_replace(
+                                        fee_type=fee_type,
+                                        sheetname=part,
+                                        identify_col="Reg Number",
+                                        identify_value=reg_no,
+                                        column_name="Paid",
+                                        new_value=tx.amount,
+                                    )
+                                else:
+                                    donor_data = {"Name": tx.name, "Paid": tx.amount}
+                                    add_record(
+                                        donor_data,
+                                        sheetname="Donations",
+                                        fee_type=fee_type,
+                                        donation=True,
+                                    )
                                 return jsonify({"success": True}), 200
                             else:
                                 tx.status = data["status"]
                                 tx.update()
                                 return jsonify({"success": False}), 417
                         else:
-                            # update record as failed
-                            tx.status = "failed"
-                            tx.update()
                             return jsonify({"success": False}), 417
                     except:
                         logger.error(traceback.format_exc())
-                        # update record as error
-                        tx.status = "error"
-                        tx.update()
                         return jsonify({"success": False}), 500
                 else:
-                    tx.status = status
-                    tx.update()
                     return jsonify({"success": False}), 417
             else:
-                return jsonify({"success": False}), 404
+                # transaction already exists
+                if tx.status == "completed":
+                    logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
+                    return jsonify({"success": True}), 200
+                return jsonify({"success": False}), 500
         except:
             logger.error(traceback.format_exc())
-            # update record as error
-            tx.status = "error"
-            tx.update()
             return jsonify({"success": False}), 500
     else:
         return jsonify({"success": False}), 401
@@ -258,117 +283,136 @@ def payment_webhook():
 
 @main.get("/payment-callback")
 def payment_callback():
-    if request.headers.get("verif-hash") == RAVE_SEC_KEY:
-        try:
-            payload = request.args
-            message = "That didn't really work out 😕"
-            link_mssg = "Try again?"
+    message = "That didn't really work out 😕"
+    link_mssg = "Try again?"
+    try:
+        payload = request.args
+        # get transaction details from payload
+        status = payload["status"]
+        tx_ref = payload["tx_ref"]
+        flw_tx_id = payload["transaction_id"]
 
-            # create directory for each day
-            directory = os.path.join(
-                WEBHOOK_LOG, datetime.utcnow().strftime("%d-%m-%Y")
-            )
-            os.makedirs(directory, exist_ok=True)
-            log_file = os.path.join(
-                directory, f"{datetime.utcnow().strftime('%H:%M:%S')}.json"
-            )
-            with open(log_file, "w") as file:
-                json.dump(payload, file)
-
-            # get transaction details from payload
-            status = payload["status"]
-            tx_ref = payload["tx_ref"]
-            flw_tx_id = payload["transaction_id"]
-            reg_no = str(tx_ref).split("-")[1]
-
-            # get transaction details from database
-            tx = Transactions.query.filter(
-                Transactions.tx_ref == tx_ref,
-                Transactions.status == "pending",
-            ).one_or_none()
-            if tx:  # transaction found
-                # get transaction status
-                if status == "successful":
-                    verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
-                    try:
-                        # verify transaction
-                        response = requests.get(
-                            verify_url,
-                            headers={
-                                "Content-Type": "application/json",
-                                "Authorization": f"Bearer {RAVE_SEC_KEY}",
-                            },
-                        )
-                        if response.status_code == 200:
-                            data = response.json()
-                            if data["status"] == "success":
-                                # update record as successful
-                                if (
-                                    tx.status != "completed"
-                                ):  # transaction was pending
-                                    tx.status = "completed"
-                                    flw_tx_ref = data["data"]["flw_ref"]
-                                    tx.flw_tx_id = flw_tx_id
-                                    tx.flw_tx_ref = flw_tx_ref
-                                    tx.update()
-                                    # update spreadsheet
-                                    part = tx_ref.split("-")[0]
-                                    part = str(part).capitalize()
-                                    if not tx.donation:
-                                        find_and_replace(
-                                            sheetname=part,
-                                            identify_col="Reg Number",
-                                            identify_value=reg_no,
-                                            column_name="Paid",
-                                            new_value=tx.amount
-                                        )
-                                    else:
-                                        donor_data = {
-                                            "Name": tx.name,
-                                            "Paid": tx.amount
-                                        }
-                                        add_record(donor_data, "Donations", donation=True)
-
-                                elif tx.status == "completed":
-                                    logger.info(
-                                        f"TX #{tx.flw_tx_id} ALREADY VERIFIED"
-                                    )
-                                message = "Thank you for completing the payment ❤️✨" if not tx.donation else "Thank you for donating ❤️✨"
-                                link_mssg = "Pay again?"
-                                return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-                            else:
-                                tx.status = data["status"]
-                                tx.update()
-                                return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-                        else:
-                            # update record as failed
-                            tx.status = "failed"
+        # get transaction details from database
+        tx = Transactions.query.filter(
+            Transactions.tx_ref == tx_ref,
+        ).one_or_none()
+        if not tx:  # new transaction
+            # get transaction status
+            if status == "successful":
+                verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
+                try:
+                    # verify transaction
+                    response = requests.get(
+                        verify_url,
+                        headers={
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {RAVE_SEC_KEY}",
+                        },
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data["status"] == "success":
+                            # create transaction
+                            flw_tx_ref = data["data"]["flw_ref"]
+                            name = data["data"]["customer"]["name"]
+                            amount = data["data"]["amount"]
+                            fee_type = data["data"]["meta"]["fee_type"]
+                            donation = (
+                                True
+                                if data["data"]["meta"]["donation"] == "true"
+                                else False
+                            )
+                            part = data["data"]["meta"]["part"]
+                            reg_no = None
+                            if not donation:
+                                name_list = get_data_from_worksheet(part, fee_type)
+                                reg_no = [
+                                    record[1]
+                                    for record in name_list
+                                    if record[0].strip() == name.strip()
+                                ][0]
+                            tx = Transactions(
+                                name=name,
+                                amount=amount,
+                                fee_type=fee_type,
+                                donation=donation,
+                                reg_no=reg_no,
+                                part=part,
+                                tx_ref=tx_ref,
+                            )
+                            tx.insert()
+                            # update record as successful
+                            tx.status = "completed"
+                            tx.flw_tx_id = flw_tx_id
+                            tx.flw_tx_ref = flw_tx_ref
                             tx.update()
-                            return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-                    except:
-                        logger.error(traceback.format_exc())
-                        # update record as error
-                        tx.status = "error"
-                        tx.update()
-                        return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-                else:
-                    tx.status = status
-                    tx.update()
-                    return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
+                            # update spreadsheet
+                            if not tx.donation:
+                                logger.info(
+                                    f"UPDATING BALANCE FOR {name}. ADDING {amount}"
+                                )
+                                find_and_replace(
+                                    fee_type=fee_type,
+                                    sheetname=part,
+                                    identify_col="Reg Number",
+                                    identify_value=reg_no,
+                                    column_name="Paid",
+                                    new_value=tx.amount,
+                                )
+                            else:
+                                donor_data = {"Name": tx.name, "Paid": tx.amount}
+                                add_record(
+                                    donor_data,
+                                    sheetname="Donations",
+                                    fee_type=fee_type,
+                                    donation=True,
+                                )
+
+                            message = (
+                                "Thank you for completing the payment ❤️✨"
+                                if not donation
+                                else "Thank you for donating ❤️✨"
+                            )
+                            link_mssg = "Pay again?"
+                            return redirect(
+                                url_for(
+                                    "main.thanks", message=message, link_mssg=link_mssg
+                                )
+                            )
+                        else:
+                            tx.status = data["status"]
+                            tx.update()
+                            return redirect(
+                                url_for(
+                                    "main.thanks", message=message, link_mssg=link_mssg
+                                )
+                            )
+                    else:
+                        return redirect(
+                            url_for("main.thanks", message=message, link_mssg=link_mssg)
+                        )
+                except:
+                    logger.error(traceback.format_exc())
+                    return redirect(
+                        url_for("main.thanks", message=message, link_mssg=link_mssg)
+                    )
             else:
-                return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-
-        except:
-            logger.error(traceback.format_exc())
-            # update record as error
-            tx.status = "error"
-            tx.update()
-            return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-    else:
+                return redirect(
+                    url_for("main.thanks", message=message, link_mssg=link_mssg)
+                )
+        else:
+            # transaction already exists
+            if tx.status == "completed":
+                logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
+                message = (
+                    "Thank you for completing the payment ❤️✨"
+                    if not tx.donation
+                    else "Thank you for donating ❤️✨"
+                )
+                link_mssg = "Pay again?"
+            return redirect(
+                url_for("main.thanks", message=message, link_mssg=link_mssg)
+            )
+    except:
+        logger.error(traceback.format_exc())
         return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
-
-
-
-@main.get("/thanks")
-def thanks(message, link_mssg):
-    return render_template("thanks.html", message=message, link_mssg=link_mssg)

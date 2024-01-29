@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% if title %}
+    <title>{{ title }} | CSC UNN</title>
+    {% else %}
+    <title>Payment Portal | CSC UNN</title>
+    {% endif %}
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:400,100,300,700"
+      rel="stylesheet"
+      type="text/css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loading.css') }}"
+    />
+
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='favicon.png') }}"
+    />
+    <link
+      rel="icon"
+      type="image/vnd.microsoft.icon"
+      href="{{ url_for('static', filename='favicon.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="{{ url_for('static', filename='apple-favicon.png') }}"
+    />
+  </head>
+  <body>
+    <style>
+      #hero-section {
+        background-image: url("{{ url_for('static', filename='images/' + bg_img ) }}");
+        height: 100%;
+      }
+    </style>
+    <section id="hero-section" class="ftco-section img bg-hero">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-md-6 text-center mb-4">
+            <h2 class="heading-section">
+              <a class="text-white" href="{{ url_for('main.index') }}"
+                >Catholic Students' Choir</a
+              >
+            </h2>
+          </div>
+        </div>
+        <div class="row justify-content-center">
+          <div class="col-lg-11">
+            <div class="wrapper">
+              <div class="row no-gutters justify-content-between">
+                <div class="col-lg-6 d-flex align-items-stretch">
+                  <div class="info-wrap w-100 p-5">
+                    <h3 class="mb-4">Fusion Cantus 4.0</h3>
+                    <div class="dbox w-100 d-flex align-items-start">
+                      <div class="text">
+                        <p>
+                          Lorem ipsum dolor sit amet consectetur adipisicing
+                          elit. Quaerat consequuntur officiis vitae odio debitis
+                          nam optio quas maxime rem unde.
+                        </p>
+                      </div>
+                    </div>
+                    <div class="dbox w-100 d-flex align-items-start">
+                      <div
+                        class="icon d-flex align-items-center justify-content-center"
+                      >
+                        <span class="fa fa-instagram"></span>
+                      </div>
+                      <div class="text pl-4">
+                        <p>
+                          <span>Instagram</span>
+                          <a
+                            href="https://instagram.com/csc_unn"
+                            target="_blank"
+                            >csc_unn</a
+                          >
+                        </p>
+                      </div>
+                    </div>
+                    <div class="dbox w-100 d-flex align-items-start">
+                      <div
+                        class="icon d-flex align-items-center justify-content-center"
+                      >
+                        <span class="fa fa-globe"></span>
+                      </div>
+                      <div class="text pl-4">
+                        <p><span>Website</span> <a href="#">cscunn.ng</a></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+                <script src="{{ url_for('static', filename='js/popper.js') }}"></script>
+                <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+                <script src="{{ url_for('static', filename='js/jquery.validate.min.js')}}"></script>
+                <div class="col-lg-5">{% block body %}{% endblock %}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -37,8 +37,8 @@ class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
     status = db.Column(db.String(20), default="pending")
     uid = db.Column(db.String(200), unique=True, nullable=False)
     name = db.Column(db.String(200), nullable=False)
-    reg_no = db.Column(db.String(20), nullable=False)
-    part = db.Column(db.String(10), nullable=False)
+    reg_no = db.Column(db.String(20))
+    part = db.Column(db.String(10))
     fee_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     donation = db.Column(db.Boolean, default=False)
@@ -46,8 +46,7 @@ class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
     flw_tx_id = db.Column(db.String(100))
     flw_tx_ref = db.Column(db.String(100))
 
-    def __init__(self, name, reg_no, part, fee_type, amount, donation) -> None:
-        super().__init__()
+    def __init__(self, name, reg_no, part, fee_type, amount, donation, tx_ref) -> None:
         self.name = name
         self.reg_no = reg_no
         self.part = part
@@ -55,8 +54,8 @@ class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.amount = amount
         self.donation = donation
         self.uid = uuid.uuid4().hex
-        self.tx_ref = (
-            f"{self.part.lower()}-{self.reg_no}-{str(time.time()).split('.')[0]}"
-            if not self.donation
-            else f"dont-{str(time.time()).split('.')[0]}"
-        )
+        self.tx_ref = tx_ref
+
+    @staticmethod
+    def get_tx_ref(part: str):
+        return f"{part.lower()}-{str(time.time()).split('.')[0]}"

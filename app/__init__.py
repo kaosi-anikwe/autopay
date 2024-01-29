@@ -1,4 +1,5 @@
 import os
+import random
 import logging
 from flask import Flask
 from dotenv import load_dotenv
@@ -45,5 +46,11 @@ def create_app(config=Config):
     from .main.routes import main
 
     app.register_blueprint(main)
+
+    # choose background image
+    @app.context_processor
+    def choose_bg():
+        images = os.listdir(os.path.join(app.static_folder, "images"))
+        return {"bg_img": random.choice(images)}
 
     return app

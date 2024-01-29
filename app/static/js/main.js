@@ -68,7 +68,7 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
     const amount = document.getElementById("amount").value;
     const fee_type = document.getElementById("fee_type").value;
     const donation = document.getElementById("donate").checked;
-    let payload = { part, name, amount, fee_type, donation };
+    let payload = { part, donation };
     let response = await fetch("/tx_ref", {
       method: "POST",
       headers: {
@@ -115,7 +115,8 @@ const getNames = async () => {
   try {
     nameDiv.classList.toggle("running");
     const part = document.getElementById("part").value;
-    let response = await fetch(`/names?part=${part}`);
+    const fee_type = document.getElementById("fee_type").value;
+    let response = await fetch(`/names?part=${part}&fee_type=${fee_type}`);
     if (response.ok) {
       let data = await response.json();
       if (data.names) {
@@ -147,5 +148,6 @@ document.getElementById("donate").addEventListener("change", (e) => {
 });
 
 document.getElementById("part").addEventListener("change", getNames);
+document.getElementById("fee_type").addEventListener("change", getNames);
 document.addEventListener("DOMContentLoaded", getNames);
 document.getElementById("name").addEventListener("input", handleInput);

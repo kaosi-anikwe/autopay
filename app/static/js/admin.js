@@ -48,9 +48,12 @@ const displayAutocompleteItems = (items) => {
 
 const getNames = async () => {
   const part = document.getElementById("part").value;
+  const fee_type = document.getElementById("fee_type").value;
+  const mode = document.getElementById("current-mode").innerText;
+  const nameDiv = document.getElementById("name-div");
   document.getElementById("name").value = "";
   document.getElementById("reg_no").value = "";
-  if (part === "Donation") {
+  if (part === "Donations" || mode.includes("name")) {
     document.getElementById("name").required = false;
     document.getElementById("reg_no").required = false;
     document.getElementById("name").removeEventListener("input", handleInput);
@@ -58,27 +61,26 @@ const getNames = async () => {
     document.getElementById("name").required = true;
     document.getElementById("reg_no").required = true;
     document.getElementById("name").addEventListener("input", handleInput);
-    const nameDiv = document.getElementById("name-div");
-    try {
-      nameDiv.classList.toggle("running");
-      let response = await fetch(`/names?part=${part}`);
-      if (response.ok) {
-        let data = await response.json();
-        if (data.names) {
-          names = data.names;
-          document.getElementById("name").disabled = false;
-        }
-      } else {
-        alert("Error getting parts. Try refreshing the page");
-        let error = await response.json();
-        console.log(error);
+  }
+  try {
+    nameDiv.classList.toggle("running");
+    let response = await fetch(`/names?part=${part}&fee_type=${fee_type}`);
+    if (response.ok) {
+      let data = await response.json();
+      if (data.names) {
+        names = data.names;
+        document.getElementById("name").disabled = false;
       }
-    } catch (error) {
-      alert("An error occured. Please try again later or contact the admins.");
+    } else {
+      alert("Error getting parts. Try refreshing the page");
+      let error = await response.json();
       console.log(error);
-    } finally {
-      nameDiv.classList.toggle("running");
     }
+  } catch (error) {
+    alert("An error occured. Please try again later or contact the admins.");
+    console.log(error);
+  } finally {
+    nameDiv.classList.toggle("running");
   }
 };
 
@@ -118,50 +120,69 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
   const mssg = document.getElementById("form-message-success");
   mssg.hidden = true;
   formDiv.classList.toggle("running");
-  // check for donation
-  const input = document.getElementById("name").value.toLowerCase();
-  const checkNames = names.map((name) => name[0]);
-  const filteredData = input
-    ? checkNames.filter(function (item) {
-        return item.toLowerCase().includes(input);
-      })
-    : [];
-  if (!filteredData[0]) {
-    document.getElementById("part").value = "Donation";
+  if (mode.includes("payment")) {
+    // check for donation
+    const input = document.getElementById("name").value.toLowerCase();
+    const checkNames = names.map((name) => name[0]);
+    const filteredData = input
+      ? checkNames.filter(function (item) {
+          return item.toLowerCase().includes(input);
+        })
+      : [];
+    if (!filteredData[0]) {
+      document.getElementById("part").value = "Donations";
+    }
   }
   try {
     if (mode.includes("name")) {
+      let proceed = false;
       // handle payment submission
       const fee_type = document.getElementById("fee_type").value;
       const part = document.getElementById("part").value;
       const name = document.getElementById("name").value;
       const reg_no = document.getElementById("reg_no").value;
-      const nameFile = document.getElementById("name-file").files;
-      const formData = new FormData();
-      formData.append("name-file", nameFile);
-      formData.append("fee_type", fee_type);
-      formData.append("part", part);
-      formData.append("name", name);
-      formData.append("reg_no", reg_no);
-      let response = await fetch("/add-name", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": document.getElementById("csrf_token").value,
-        },
-        body: formData,
-      });
-      if (response.ok) {
-        mssg.innerText = "Added successfully!";
-        mssg.hidden = false;
-        document.getElementById("name").value = "";
-        document.getElementById("reg_no").value = "";
-        document.getElementById("name-file").value = "";
+      const nameFile = document.getElementById("name-file").files[0];
+      if (nameFile) {
+        if (
+          confirm(
+            "This will clear the Google Sheet and replace with uploaded file."
+          )
+        ) {
+          proceed = true;
+        }
       } else {
-        alert(
-          "Failed to add name. Check spreadsheet to confirm if record already exists."
-        );
-        let error = await response.json();
-        console.log(error);
+        proceed = true;
+      }
+      if (proceed) {
+        const formData = new FormData();
+        formData.append("name-file", nameFile);
+        formData.append("fee_type", fee_type);
+        formData.append("part", part);
+        formData.append("name", name);
+        formData.append("reg_no", reg_no);
+        let response = await fetch("/add-name", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": document.getElementById("csrf_token").value,
+          },
+          body: formData,
+        });
+        if (response.ok) {
+          mssg.innerText = "Added successfully!";
+          mssg.hidden = false;
+          document.getElementById("name").value = "";
+          document.getElementById("reg_no").value = "";
+          document.getElementById("name-file").value = "";
+          document.querySelector(".custom-file-label").innerHTML =
+            "Upload Name File";
+          await getNames();
+        } else {
+          alert(
+            "Failed to add name. Check spreadsheet to confirm if record already exists."
+          );
+          let error = await response.json();
+          console.log(error);
+        }
       }
     }
     if (mode.includes("payment")) {
@@ -199,4 +220,13 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
 });
 
 document.getElementById("part").addEventListener("change", getNames);
+document.getElementById("fee_type").addEventListener("change", getNames);
 document.addEventListener("DOMContentLoaded", getNames);
+document.getElementById("name").removeEventListener("input", handleInput);
+
+$("#name-file").on("change", (e) => {
+  //get the file name
+  const fileName = e.target.files[0].name;
+  //replace the "Choose a file" label
+  $(".custom-file-label").html(fileName);
+});

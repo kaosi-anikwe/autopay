@@ -1,275 +1,139 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>Payment Portal| CSC UNN</title>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-
-    <link
-      href="https://fonts.googleapis.com/css?family=Roboto:400,100,300,700"
-      rel="stylesheet"
-      type="text/css"
-    />
-
-    <link
-      rel="stylesheet"
-      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
-    />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
-    />
-
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/loading.css') }}"
-    />
-  </head>
-  <body>
-    <section
-      class="ftco-section img bg-hero"
-      style="background-image: url(static/images/1.jpg); height: 100%"
+{% extends "layout.html" %} {% block body %}
+<div class="main-body">
+  <div class="contact-wrap w-100 p-md-5 p-4 shadow-lg mb-4">
+    <h3 class="mb-4">Pay your dues ✨</h3>
+    <div id="form-message-warning" class="mb-4" hidden></div>
+    <form
+      method="POST"
+      id="paymentForm"
+      name="paymentForm"
+      action="https://checkout.flutterwave.com/v3/hosted/pay"
     >
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col-md-6 text-center mb-4">
-            <h2 class="heading-section">Catholic Students' Choir</h2>
+      <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+        id="csrf_token"
+      />
+      <input
+        type="hidden"
+        name="public_key"
+        value="FLWPUBK_TEST-9d8a095e00a9fdcdc95c38a7a27e333e-X"
+      />
+      <input
+        id="flw-tx_ref"
+        type="hidden"
+        name="tx_ref"
+        value="bitethtx-019203"
+      />
+      <input id="flw-amount" type="hidden" name="amount" value="3400" />
+      <input type="hidden" name="currency" value="NGN" />
+      <input
+        type="hidden"
+        name="redirect_url"
+        value="{{ url_for('main.payment_callback', _external=True, _scheme='https') }}"
+      />
+      <input id="flw-fee_type" type="hidden" name="meta[fee_type]" value="54" />
+      <input id="flw-part" type="hidden" name="meta[part]" value="Soprano" />
+      <input
+        id="flw-donation"
+        type="hidden"
+        name="meta[donation]"
+        value="false"
+      />
+      <input
+        id="flw-name"
+        type="hidden"
+        name="customer[name]"
+        value="Jesse Pinkman"
+      />
+      <div class="row">
+        <div class="col-md-12">
+          <div class="form-group">
+            <select class="form-control" name="fee_type" id="fee_type">
+              <option value="fusion-cantus" selected>Fusion Cantus 4.0</option>
+              <option value="send-forth">Send Forth</option>
+            </select>
           </div>
         </div>
-        <div class="row justify-content-center">
-          <div class="col-lg-11">
-            <div class="wrapper">
-              <div class="row no-gutters justify-content-between">
-                <div class="col-lg-6 d-flex align-items-stretch">
-                  <div class="info-wrap w-100 p-5">
-                    <h3 class="mb-4">Fusion Cantus 4.0</h3>
-                    <div class="dbox w-100 d-flex align-items-start">
-                      <div class="text">
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur adipisicing
-                          elit. Quaerat consequuntur officiis vitae odio debitis
-                          nam optio quas maxime rem unde.
-                        </p>
-                      </div>
-                    </div>
-                    <div class="dbox w-100 d-flex align-items-start">
-                      <div
-                        class="icon d-flex align-items-center justify-content-center"
-                      >
-                        <span class="fa fa-instagram"></span>
-                      </div>
-                      <div class="text pl-4">
-                        <p>
-                          <span>Instagram</span>
-                          <a
-                            href="https://instagram.com/csc_unn"
-                            target="_blank"
-                            >csc_unn</a
-                          >
-                        </p>
-                      </div>
-                    </div>
-                    <div class="dbox w-100 d-flex align-items-start">
-                      <div
-                        class="icon d-flex align-items-center justify-content-center"
-                      >
-                        <span class="fa fa-globe"></span>
-                      </div>
-                      <div class="text pl-4">
-                        <p><span>Website</span> <a href="#">cscunn.ng</a></p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-lg-5">
-                  <div class="contact-wrap w-100 p-md-5 p-4 shadow-lg mb-4">
-                    <h3 class="mb-4">Pay your dues ✨</h3>
-                    <div id="form-message-warning" class="mb-4" hidden></div>
-                    <form
-                      method="POST"
-                      id="paymentForm"
-                      name="paymentForm"
-                      action="https://checkout.flutterwave.com/v3/hosted/pay"
-                    >
-                      <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="{{ csrf_token() }}"
-                        id="csrf_token"
-                      />
-                      <input
-                        type="hidden"
-                        name="public_key"
-                        value="FLWPUBK_TEST-9d8a095e00a9fdcdc95c38a7a27e333e-X"
-                      />
-                      <input
-                        id="flw-tx_ref"
-                        type="hidden"
-                        name="tx_ref"
-                        value="bitethtx-019203"
-                      />
-                      <input
-                        id="flw-amount"
-                        type="hidden"
-                        name="amount"
-                        value="3400"
-                      />
-                      <input type="hidden" name="currency" value="NGN" />
-                      <input
-                        type="hidden"
-                        name="redirect_url"
-                        value="{{ url_for('main.payment_callback', _external=True, _scheme='https') }}"
-                      />
-                      <input
-                        id="flw-fee_type"
-                        type="hidden"
-                        name="meta[fee_type]"
-                        value="54"
-                      />
-                      <input
-                        id="flw-part"
-                        type="hidden"
-                        name="meta[part]"
-                        value="Soprano"
-                      />
-                      <input
-                        id="flw-donation"
-                        type="hidden"
-                        name="meta[donation]"
-                        value="false"
-                      />
-                      <input
-                        id="flw-name"
-                        type="hidden"
-                        name="customer[name]"
-                        value="Jesse Pinkman"
-                      />
-                      <div class="row">
-                        <div class="col-md-12">
-                          <div class="form-group">
-                            <select
-                              class="form-control"
-                              name="fee_type"
-                              id="fee_type"
-                            >
-                              <option value="fusion-cantus" selected>
-                                Fusion Cantus 4.0
-                              </option>
-                              <option value="send-forth">Send Forth</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div class="form-group">
-                            <select class="form-control" name="part" id="part">
-                              <option value="Soprano" selected>Soprano</option>
-                              <option value="Alto">Alto</option>
-                              <option value="Tenor">Tenor</option>
-                              <option value="Bass">Bass</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div
-                            id="name-div"
-                            class="form-group autocomplete ld-over"
-                          >
-                            <div
-                              class="ld ld-ring ld-spin"
-                              style="font-size: 1.5rem"
-                            ></div>
-                            <input
-                              type="text"
-                              class="form-control"
-                              name="name"
-                              id="name"
-                              placeholder="Name"
-                              disabled
-                              required
-                            />
-                            <div
-                              class="autocomplete-items"
-                              id="autocompleteItems"
-                              hidden
-                            ></div>
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div class="form-group">
-                            <input
-                              type="email"
-                              class="form-control"
-                              name="customer[email]"
-                              id="email"
-                              placeholder="Email"
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div class="form-group">
-                            <input
-                              type="number"
-                              class="form-control"
-                              name="my-amount"
-                              id="amount"
-                              placeholder="Amount"
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div class="form-group form-check">
-                            <input
-                              type="checkbox"
-                              class="form-check-input"
-                              name="donate"
-                              id="donate"
-                            />
-                            <label class="form-check-label" for="donate">
-                              I want to donate.
-                            </label>
-                          </div>
-                        </div>
-                        <div class="col-md-12">
-                          <div class="form-group">
-                            <button
-                              id="submit-btn"
-                              type="submit"
-                              value="Submit"
-                              class="btn btn-secondary ld-ext-right"
-                            >
-                              Submit
-                              <div
-                                class="ld ld-ring ld-spin"
-                                style="font-size: 1.2rem"
-                              ></div>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div class="col-md-12">
+          <div class="form-group">
+            <select class="form-control" name="part" id="part">
+              <option value="Soprano" selected>Soprano</option>
+              <option value="Alto">Alto</option>
+              <option value="Tenor">Tenor</option>
+              <option value="Bass">Bass</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div id="name-div" class="form-group autocomplete ld-over">
+            <div class="ld ld-ring ld-spin" style="font-size: 1.5rem"></div>
+            <input
+              type="text"
+              class="form-control"
+              name="name"
+              id="name"
+              placeholder="Name"
+              disabled
+              required
+            />
+            <div class="autocomplete-items" id="autocompleteItems" hidden></div>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div class="form-group">
+            <input
+              type="email"
+              class="form-control"
+              name="customer[email]"
+              id="email"
+              placeholder="Email"
+              required
+            />
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div class="form-group">
+            <input
+              type="number"
+              class="form-control"
+              name="my-amount"
+              id="amount"
+              placeholder="Amount"
+              required
+            />
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div class="form-group form-check">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              name="donate"
+              id="donate"
+            />
+            <label class="form-check-label" for="donate">
+              I want to donate.
+            </label>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div class="form-group">
+            <button
+              id="submit-btn"
+              type="submit"
+              value="Submit"
+              class="btn btn-secondary ld-ext-right"
+            >
+              Submit
+              <div class="ld ld-ring ld-spin" style="font-size: 1.2rem"></div>
+            </button>
           </div>
         </div>
       </div>
-    </section>
-
-    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/popper.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.validate.min.js')}}"></script>
-    <script src="{{ url_for('static', filename='js/main.js')}}"></script>
-  </body>
-</html>
+    </form>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js')}}"></script>
+{% endblock %}
