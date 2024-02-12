@@ -53,7 +53,7 @@ const getNames = async () => {
   const nameDiv = document.getElementById("name-div");
   document.getElementById("name").value = "";
   document.getElementById("reg_no").value = "";
-  if (part === "Donations" || mode.includes("name")) {
+  if (part === "Donations" || mode.toLowerCase().includes("name")) {
     document.getElementById("name").required = false;
     document.getElementById("reg_no").required = false;
     document.getElementById("name").removeEventListener("input", handleInput);
@@ -98,7 +98,7 @@ document.getElementById("alt-mode").addEventListener("click", () => {
   document.getElementById("name").value = "";
   document.getElementById("reg_no").value = "";
   const current = document.getElementById("current-mode");
-  if (current.innerText.includes("payment")) {
+  if (current.innerText.toLowerCase().includes("payment")) {
     document.getElementById("amount-div").hidden = false;
     document.getElementById("amount").required = true;
     document.getElementById("name").required = true;
@@ -120,7 +120,7 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
   const mssg = document.getElementById("form-message-success");
   mssg.hidden = true;
   formDiv.classList.toggle("running");
-  if (mode.includes("payment")) {
+  if (mode.toLowerCase().includes("payment")) {
     // check for donation
     const input = document.getElementById("name").value.toLowerCase();
     const checkNames = names.map((name) => name[0]);
@@ -134,7 +134,7 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
     }
   }
   try {
-    if (mode.includes("name")) {
+    if (mode.toLowerCase().includes("name")) {
       let proceed = false;
       // handle payment submission
       const fee_type = document.getElementById("fee_type").value;
@@ -175,7 +175,6 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
           document.getElementById("name-file").value = "";
           document.querySelector(".custom-file-label").innerHTML =
             "Upload Name File";
-          await getNames();
         } else {
           alert(
             "Failed to add name. Check spreadsheet to confirm if record already exists."
@@ -185,14 +184,14 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
         }
       }
     }
-    if (mode.includes("payment")) {
+    if (mode.toLowerCase().includes("payment")) {
       // handle name submission
       const fee_type = document.getElementById("fee_type").value;
       const part = document.getElementById("part").value;
       const name = document.getElementById("name").value;
       const amount = document.getElementById("amount").value;
       const reg_no = document.getElementById("reg_no").value;
-      const donation = document.getElementById("part").value === "Donation";
+      const donation = document.getElementById("part").value === "Donations";
       const payload = { fee_type, part, name, amount, reg_no, donation };
       let response = await fetch("/add-payment", {
         method: "POST",
@@ -216,6 +215,9 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
     console.log(error);
   } finally {
     formDiv.classList.toggle("running");
+    if (mode.toLowerCase().includes("name")) {
+      await getNames();
+    }
   }
 });
 

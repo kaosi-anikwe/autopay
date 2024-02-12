@@ -82,8 +82,8 @@
           <div class="col-lg-11">
             <div class="wrapper">
               <div class="row no-gutters justify-content-between">
-                <div class="col-lg-6 d-flex align-items-stretch">
-                  <div class="info-wrap w-100 p-5">
+                <div class="col-lg-6 mb-4 d-flex align-items-stretch">
+                  <div class="info-wrap w-100 p-6">
                     <h3 id="page-title" class="mb-4 h3">Fusion Cantus 4.0</h3>
                     <div class="dbox w-100 d-flex align-items-start">
                       <div class="text">
@@ -140,6 +140,7 @@
     <script>
       // prettier-ignore
       let pageInfo = JSON.parse('{{ page_info | tojson }}');
+      let pageStyle = "{{ page_style }}" ? "{{ page_style }}" : "";
     </script>
     <script src="{{ url_for('static', filename='js/index.js')}}"></script>
   </body>

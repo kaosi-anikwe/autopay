@@ -43,7 +43,7 @@ def get_names():
         fee_type = request.args.get("fee_type")
         logger.info(f"Getting names for {fee_type} {part}")
 
-        names = get_data_from_worksheet(part, fee_type)
+        names = get_data_from_worksheet(part, fee_type) if part != "Donations" else []
 
         return jsonify(names=names)
     except Exception as e:
@@ -72,9 +72,14 @@ def get_tx_ref():
 def thanks():
     message = request.args.get("message")
     link_mssg = request.args.get("link_mssg")
+    fee_type = request.args.get("fee_type")
     title = "Thank you ❤️✨" if "thank" in message.lower() else "Sorry 😕"
     return render_template(
-        "thanks.html", message=message, link_mssg=link_mssg, title=title
+        "thanks.html",
+        message=message,
+        link_mssg=link_mssg,
+        title=title,
+        page_style=fee_type,
     )
 
 
@@ -177,9 +182,9 @@ def payment_webhook():
                 json.dump(payload, file)
 
             # get transaction details from payload
-            status = payload["status"]
-            tx_ref = payload["txRef"]
-            flw_tx_id = payload["id"]
+            status = payload.get("status")
+            tx_ref = payload.get("txRef")
+            flw_tx_id = payload.get("id")
 
             # get transaction details from database
             tx = Transactions.query.filter(
@@ -288,9 +293,9 @@ def payment_callback():
     try:
         payload = request.args
         # get transaction details from payload
-        status = payload["status"]
-        tx_ref = payload["tx_ref"]
-        flw_tx_id = payload["transaction_id"]
+        status = payload.get("status")
+        tx_ref = payload.get("tx_ref")
+        flw_tx_id = payload.get("transaction_id")
 
         # get transaction details from database
         tx = Transactions.query.filter(
@@ -376,7 +381,10 @@ def payment_callback():
                             link_mssg = "Pay again?"
                             return redirect(
                                 url_for(
-                                    "main.thanks", message=message, link_mssg=link_mssg
+                                    "main.thanks",
+                                    message=message,
+                                    link_mssg=link_mssg,
+                                    fee_type=fee_type,
                                 )
                             )
                         else:
@@ -384,7 +392,9 @@ def payment_callback():
                             tx.update()
                             return redirect(
                                 url_for(
-                                    "main.thanks", message=message, link_mssg=link_mssg
+                                    "main.thanks",
+                                    message=message,
+                                    link_mssg=link_mssg,
                                 )
                             )
                     else:

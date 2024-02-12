@@ -1,10 +1,16 @@
 const updateInfo = () => {
-  const fee_type = document.getElementById("fee_type").value;
-  const title = pageInfo[fee_type].title;
-  const info = pageInfo[fee_type].info;
+  if (document.getElementById("fee_type")) {
+    const fee_type = document.getElementById("fee_type").value;
+    pageStyle = fee_type;
+  }
+
+  const title = pageInfo[pageStyle].title;
+  const info = pageInfo[pageStyle].info;
   document.getElementById("page-title").innerHTML = title;
   document.getElementById("page-info").innerHTML = info;
 };
 
-document.getElementById("fee_type").addEventListener("change", updateInfo);
+if (document.getElementById("fee_type")) {
+  document.getElementById("fee_type").addEventListener("change", updateInfo);
+}
 document.addEventListener("DOMContentLoaded", updateInfo);

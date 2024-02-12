@@ -187,5 +187,6 @@ def file_upload(namefile: FileStorage, fee_type: str):
                 last_column_letter = get_last_column_letter(worksheet)
                 last_row_index = worksheet.row_count
                 worksheet.sort(
-                    (sort_column_index, "asc"), range=f"A2:{last_column_letter}{last_row_index}"
+                    (sort_column_index, "asc"),
+                    range=f"A2:{last_column_letter}{last_row_index}",
                 )

@@ -53,7 +53,7 @@ def create_app(config=Config):
     def choose_bg():
         images = os.listdir(os.path.join(app.static_folder, "images"))
         return {"bg_img": random.choice(images)}
-    
+
     # add page info
     @app.context_processor
     def add_page_info():
