@@ -1,5 +1,5 @@
 {% extends "layout.html" %} {% block body %}
-<div class="main-body">
+<div id="main-body" class="main-body">
   <div class="contact-wrap w-100 p-md-5 p-4 shadow-lg mb-4">
     <h3 class="mb-4">Pay your dues ✨</h3>
     <div id="form-message-warning" class="mb-4" hidden></div>
@@ -18,7 +18,7 @@
       <input
         type="hidden"
         name="public_key"
-        value="FLWPUBK_TEST-9d8a095e00a9fdcdc95c38a7a27e333e-X"
+        value="FLWPUBK-7196e43ed4ac2041e707fb5d2f045d3f-X"
       />
       <input
         id="flw-tx_ref"
@@ -51,8 +51,8 @@
         <div class="col-md-12">
           <div class="form-group">
             <select class="form-control" name="fee_type" id="fee_type">
-              <option value="fusion-cantus" selected>Fusion Cantus 4.0</option>
-              <option value="send-forth">Send Forth</option>
+              <option value="send-forth" selected>Send Forth</option>
+              <!-- <option value="fusion-cantus">Fusion Cantus 4.0</option> -->
             </select>
           </div>
         </div>

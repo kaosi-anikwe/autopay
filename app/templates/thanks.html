@@ -1,8 +1,8 @@
 {% extends "layout.html" %} {% block body %}
-<div class="main-body">
+<div id="main-body" class="main-body">
   <div class="contact-wrap w-100 h-100 p-md-5 p-4 shadow-lg mb-4">
-    <h3>{{ message }}</h3>
-    <a class="text-secondary" href="{{ url_for('main.index') }}"
+    <div>{{ message | safe }}</div>
+    <a class="text-secondary" href="{{ url_for('main.index') }}#main-body"
       >{{ link_mssg }}</a
     >
   </div>

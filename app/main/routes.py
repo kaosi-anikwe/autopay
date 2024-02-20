@@ -192,7 +192,7 @@ def payment_webhook():
             ).one_or_none()
             if not tx:  # new transaciton
                 # get transaction status
-                if status == "successful":
+                if status == "completed":
                     verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
                     try:
                         # verify transaction
@@ -288,7 +288,7 @@ def payment_webhook():
 
 @main.get("/payment-callback")
 def payment_callback():
-    message = "That didn't really work out 😕"
+    message = "<h3>That didn't really work out 😕</h3>"
     link_mssg = "Try again?"
     try:
         payload = request.args
@@ -303,7 +303,7 @@ def payment_callback():
         ).one_or_none()
         if not tx:  # new transaction
             # get transaction status
-            if status == "successful":
+            if status == "completed":
                 verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
                 try:
                     # verify transaction
@@ -356,7 +356,7 @@ def payment_callback():
                                 logger.info(
                                     f"UPDATING BALANCE FOR {name}. ADDING {amount}"
                                 )
-                                find_and_replace(
+                                total = find_and_replace(
                                     fee_type=fee_type,
                                     sheetname=part,
                                     identify_col="Reg Number",
@@ -374,9 +374,9 @@ def payment_callback():
                                 )
 
                             message = (
-                                "Thank you for completing the payment ❤️✨"
+                                f"<h3>Thank you for completing the payment ❤️✨</h3><p class='h6 mb-2'>You have paid ₦{total:.2f} in total.</p>"
                                 if not donation
-                                else "Thank you for donating ❤️✨"
+                                else "<h3>Thank you for donating ❤️✨</h3>"
                             )
                             link_mssg = "Pay again?"
                             return redirect(
@@ -386,6 +386,7 @@ def payment_callback():
                                     link_mssg=link_mssg,
                                     fee_type=fee_type,
                                 )
+                                + "#main-body"
                             )
                         else:
                             tx.status = data["status"]
@@ -396,33 +397,40 @@ def payment_callback():
                                     message=message,
                                     link_mssg=link_mssg,
                                 )
+                                + "#main-body"
                             )
                     else:
                         return redirect(
                             url_for("main.thanks", message=message, link_mssg=link_mssg)
+                            + "#main-body"
                         )
                 except:
                     logger.error(traceback.format_exc())
                     return redirect(
                         url_for("main.thanks", message=message, link_mssg=link_mssg)
+                        + "#main-body"
                     )
             else:
                 return redirect(
                     url_for("main.thanks", message=message, link_mssg=link_mssg)
+                    + "#main-body"
                 )
         else:
             # transaction already exists
             if tx.status == "completed":
                 logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
                 message = (
-                    "Thank you for completing the payment ❤️✨"
+                    "<h3>Thank you for completing the payment ❤️✨</h3>"
                     if not tx.donation
-                    else "Thank you for donating ❤️✨"
+                    else "<h3>Thank you for donating ❤️✨</h3>"
                 )
                 link_mssg = "Pay again?"
             return redirect(
                 url_for("main.thanks", message=message, link_mssg=link_mssg)
+                + "#main-body"
             )
     except:
         logger.error(traceback.format_exc())
-        return redirect(url_for("main.thanks", message=message, link_mssg=link_mssg))
+        return redirect(
+            url_for("main.thanks", message=message, link_mssg=link_mssg) + "#main-body"
+        )

@@ -14,3 +14,13 @@ if (document.getElementById("fee_type")) {
   document.getElementById("fee_type").addEventListener("change", updateInfo);
 }
 document.addEventListener("DOMContentLoaded", updateInfo);
+
+window.onload = function () {
+  var targetElement = document.getElementById("main-body");
+  if (targetElement) {
+    targetElement.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+};

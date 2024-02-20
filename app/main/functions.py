@@ -19,7 +19,7 @@ load_dotenv()
 ACCEPTED_SHEETNAMES = ["Soprano", "Alto", "Tenor", "Bass", "Donations"]
 
 spreadsheet_id = os.getenv("SPREADSHEET_ID")
-google_credentials_file = json.loads(os.getenv("CREDENTIALS_FILE"))
+google_credentials_file = json.loads(os.getenv("CREDENTIALS_FILE"), strict=False)
 
 # Set up the scope for accessing Google Sheets
 scope = [
@@ -137,9 +137,9 @@ def find_and_replace(
     current_value = worksheet.cell(row_index, column_index).value
 
     # Replace the value in the specified cell
-    return worksheet.update_cell(
-        row_index, column_index, int(new_value) + int(current_value)
-    )
+    total_value = int(new_value) + int(current_value)
+    worksheet.update_cell(row_index, column_index, total_value)
+    return total_value
 
 
 def get_data_from_worksheet(sheetname: str, fee_type: str):
