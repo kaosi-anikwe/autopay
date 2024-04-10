@@ -182,9 +182,9 @@ def payment_webhook():
                 json.dump(payload, file)
 
             # get transaction details from payload
-            status = payload.get("status")
-            tx_ref = payload.get("txRef")
-            flw_tx_id = payload.get("id")
+            status = payload["data"].get("status")
+            tx_ref = payload["data"].get("tx_ref")
+            flw_tx_id = payload["data"].get("id")
 
             # get transaction details from database
             tx = Transactions.query.filter(
@@ -192,7 +192,7 @@ def payment_webhook():
             ).one_or_none()
             if not tx:  # new transaciton
                 # get transaction status
-                if status == "completed":
+                if status == "completed" or status == "successful":
                     verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
                     try:
                         # verify transaction
@@ -275,7 +275,7 @@ def payment_webhook():
                     return jsonify({"success": False}), 417
             else:
                 # transaction already exists
-                if tx.status == "completed":
+                if tx.status == "completed" or tx.status == "successful":
                     logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
                     return jsonify({"success": True}), 200
                 return jsonify({"success": False}), 500
@@ -303,7 +303,7 @@ def payment_callback():
         ).one_or_none()
         if not tx:  # new transaction
             # get transaction status
-            if status == "completed":
+            if status == "completed" or status == "successful":
                 verify_url = f"https://api.flutterwave.com/v3/transactions/{int(flw_tx_id)}/verify"
                 try:
                     # verify transaction
@@ -417,7 +417,7 @@ def payment_callback():
                 )
         else:
             # transaction already exists
-            if tx.status == "completed":
+            if tx.status == "completed" or tx.status == "successful":
                 logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
                 message = (
                     "<h3>Thank you for completing the payment ❤️✨</h3>"
