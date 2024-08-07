@@ -180,8 +180,6 @@ def add_payment():
 @csrf.exempt
 def payment_webhook():
     time.sleep(10)  # delay to avoid concurrent request with callback
-    logger.info(f"REQUEST: {request.headers.get('verif-hash')}")
-    logger.info(f"SECRET: {RAVE_SEC_KEY}")
     if request.headers.get("verif-hash") == RAVE_SEC_KEY:
         try:
             payload = request.get_json()
@@ -284,7 +282,6 @@ def payment_webhook():
 def payment_callback():
     message = "<h3>That didn't really work out 😕</h3>"
     link_mssg = "Try again?"
-    logger.info(f"SECRET: {RAVE_SEC_KEY}")
     try:
         payload = request.args
         # get transaction details from payload

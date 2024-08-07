@@ -216,7 +216,7 @@ def populate_db(force=False):
             next(reader)  # skip the header
             for row in reader:
                 member = Members(
-                    name=row[0],
+                    name=row[0].upper(),
                     phone_no=row[1],
                     part=row[2].lower(),
                 )
@@ -241,10 +241,10 @@ def populate_sheet(fee_type="fusion-cantus"):
         values = [[member.name, member.phone_no, member.amount()] for member in members]
         # add header
         logger.info(f"Updating Header: {header}")
-        worksheet.update("A1", [header], value_input_option="USER_ENTERED")
+        worksheet.update("A1", [header])
         # add values
         logger.info("Adding values")
-        worksheet.update("A2", values, value_input_option="USER_ENTERED")
+        worksheet.update("A2", values)
         logger.info("Done adding values")
         # Sort the rows alphabetically based on the specified sort column
         sort_column_index = header.index("Name") + 1
