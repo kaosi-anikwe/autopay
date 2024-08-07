@@ -13,6 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 # local imports
 from app import logger
+from app.models import Members
 
 load_dotenv()
 
@@ -56,7 +57,7 @@ def add_record(
     data: dict,
     sheetname: str,
     fee_type: str,
-    check_column: str = "Reg Number",
+    check_column: str = "Phone No",
     sort_column: str = "Name",
     donation=False,
 ):
@@ -89,7 +90,7 @@ def add_record(
 
     # Append the row to the worksheet
     values = list(data.values())
-    worksheet.append_row(values, value_input_option="USER_ENTERED")
+    worksheet.append_row(values)
 
     # Sort the rows alphabetically based on the specified sort column
     sort_column_index = header.index(sort_column) + 1
@@ -137,7 +138,7 @@ def find_and_replace(
     current_value = worksheet.cell(row_index, column_index).value
 
     # Replace the value in the specified cell
-    total_value = int(new_value) + int(current_value)
+    total_value = int(new_value)
     worksheet.update_cell(row_index, column_index, total_value)
     return total_value
 
@@ -190,3 +191,66 @@ def file_upload(namefile: FileStorage, fee_type: str):
                     (sort_column_index, "asc"),
                     range=f"A2:{last_column_letter}{last_row_index}",
                 )
+
+
+def populate_db(force=False):
+    if not force:
+        check = len(Members.query.all())
+        force = True if not check else False
+        if not force:
+            logger.info(f"db already populated")
+    if force:
+        # purge all records
+        logger.info("Purging all member records")
+        from app import db
+        import csv
+
+        db.session.query(Members).delete()
+        db.session.commit()
+
+        # add new records
+        logger.info("Adding new member records")
+
+        with open("db.tsv", "r") as file:
+            reader = csv.reader(file, delimiter="\t")
+            next(reader)  # skip the header
+            for row in reader:
+                member = Members(
+                    name=row[0],
+                    phone_no=row[1],
+                    part=row[2].lower(),
+                )
+                member.insert()
+                logger.info(f"Added {row[2]} member with ID: {member.id}")
+        return populate_sheet()
+
+
+def populate_sheet(fee_type="fusion-cantus"):
+    logger.info("POPULATING SPREADSHEET WITH DATABASE RECORDS")
+    spreadsheet = gclient.open_by_key(sheets.get(fee_type))
+    parts = ["Soprano", "Alto", "Tenor", "Bass"]
+    header = ["Name", "Phone No", "Paid"]
+    for part in parts:
+        members = Members.query.filter(Members.part == part.lower()).all()
+        if part not in [worksheet.title for worksheet in spreadsheet.worksheets()]:
+            worksheet = spreadsheet.add_worksheet(part, rows=100, cols=20)
+        else:
+            worksheet = spreadsheet.worksheet(part)
+        # clear worksheet and upload new record
+        worksheet.clear()
+        values = [[member.name, member.phone_no, member.amount()] for member in members]
+        # add header
+        logger.info(f"Updating Header: {header}")
+        worksheet.update("A1", [header], value_input_option="USER_ENTERED")
+        # add values
+        logger.info("Adding values")
+        worksheet.update("A2", values, value_input_option="USER_ENTERED")
+        logger.info("Done adding values")
+        # Sort the rows alphabetically based on the specified sort column
+        sort_column_index = header.index("Name") + 1
+        last_column_letter = get_last_column_letter(worksheet)
+        last_row_index = worksheet.row_count
+        worksheet.sort(
+            (sort_column_index, "asc"),
+            range=f"A2:{last_column_letter}{last_row_index}",
+        )

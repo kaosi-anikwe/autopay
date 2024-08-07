@@ -47,28 +47,26 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
   const submitBtn = document.getElementById("submit-btn");
   submitBtn.classList.toggle("running");
   try {
-    if (!donate) {
-      const input = document.getElementById("name").value.toLowerCase();
-      const checkNames = names.map((name) => name[0]);
-      const filteredData = input
-        ? checkNames.filter(function (item) {
-            return item.toLowerCase().includes(input);
-          })
-        : [];
-      if (!filteredData[0]) {
-        const mssg = document.getElementById("form-message-warning");
-        mssg.innerText =
-          "Your name is not registered. Please contact the admins. If you would like to donate, please check the box below.";
-        mssg.hidden = false;
-        return;
-      }
+    const input = document.getElementById("name").value.toLowerCase();
+    const checkNames = names.map((name) => name[0]);
+    const filteredData = input
+      ? checkNames.filter(function (item) {
+          return item.toLowerCase().includes(input);
+        })
+      : [];
+    if (!filteredData[0]) {
+      const mssg = document.getElementById("form-message-warning");
+      mssg.innerText =
+        "Your name is not registered. Please contact the admins to input your name.";
+      mssg.hidden = false;
+      return;
     }
+
     const part = document.getElementById("part").value;
     const name = document.getElementById("name").value;
     const amount = document.getElementById("amount").value;
     const fee_type = document.getElementById("fee_type").value;
-    const donation = document.getElementById("donate").checked;
-    let payload = { part, donation };
+    let payload = { part, name };
     let response = await fetch("/tx_ref", {
       method: "POST",
       headers: {
@@ -80,12 +78,13 @@ document.getElementById("paymentForm").addEventListener("submit", async (e) => {
     if (response.ok) {
       let data = await response.json();
       const tx_ref = data.tx_ref;
+      const memberID = data.member_id;
       // Gather info for flutter wave and submit form
       document.getElementById("flw-tx_ref").value = tx_ref;
       document.getElementById("flw-amount").value = amount;
       document.getElementById("flw-fee_type").value = fee_type;
       document.getElementById("flw-part").value = part;
-      document.getElementById("flw-donation").value = `${donation}`;
+      document.getElementById("member_id").value = `${memberID}`;
       document.getElementById("flw-name").value = name;
       // submit form
       if (
@@ -136,16 +135,16 @@ const getNames = async () => {
   }
 };
 
-document.getElementById("donate").addEventListener("change", (e) => {
-  document.getElementById("form-message-warning").hidden = true;
-  const nameInput = document.getElementById("name");
-  if (e.target.checked) {
-    donate = true;
-    nameInput.removeEventListener("input", handleInput);
-  } else {
-    nameInput.addEventListener("input", handleInput);
-  }
-});
+// document.getElementById("donate").addEventListener("change", (e) => {
+//   document.getElementById("form-message-warning").hidden = true;
+//   const nameInput = document.getElementById("name");
+//   if (e.target.checked) {
+//     donate = true;
+//     nameInput.removeEventListener("input", handleInput);
+//   } else {
+//     nameInput.addEventListener("input", handleInput);
+//   }
+// });
 
 document.getElementById("part").addEventListener("change", getNames);
 document.getElementById("fee_type").addEventListener("change", getNames);

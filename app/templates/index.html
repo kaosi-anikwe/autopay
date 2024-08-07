@@ -35,12 +35,7 @@
       />
       <input id="flw-fee_type" type="hidden" name="meta[fee_type]" value="54" />
       <input id="flw-part" type="hidden" name="meta[part]" value="Soprano" />
-      <input
-        id="flw-donation"
-        type="hidden"
-        name="meta[donation]"
-        value="false"
-      />
+      <input id="member_id" type="hidden" name="meta[member_id]" value="123" />
       <input
         id="flw-name"
         type="hidden"
@@ -51,8 +46,8 @@
         <div class="col-md-12">
           <div class="form-group">
             <select class="form-control" name="fee_type" id="fee_type">
-              <option value="send-forth" selected>Send Forth</option>
-              <!-- <option value="fusion-cantus">Fusion Cantus 4.0</option> -->
+              <!-- <option value="send-forth" selected>Send Forth</option> -->
+              <option value="fusion-cantus" selected>Fusion Cantus 5.0</option>
             </select>
           </div>
         </div>
@@ -75,6 +70,7 @@
               name="name"
               id="name"
               placeholder="Name"
+              autocomplete="off"
               disabled
               required
             />
@@ -105,7 +101,7 @@
             />
           </div>
         </div>
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
           <div class="form-group form-check">
             <input
               type="checkbox"
@@ -117,7 +113,7 @@
               I want to donate.
             </label>
           </div>
-        </div>
+        </div> -->
         <div class="col-md-12">
           <div class="form-group">
             <button

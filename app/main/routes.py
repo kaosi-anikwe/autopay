@@ -12,11 +12,10 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 
 # local imports
 from app import logger, csrf
-from app.models import Transactions
+from app.models import Transactions, Members
 from .functions import (
     find_and_replace,
     add_record,
-    get_data_from_worksheet,
     file_upload,
 )
 
@@ -43,7 +42,10 @@ def get_names():
         fee_type = request.args.get("fee_type")
         logger.info(f"Getting names for {fee_type} {part}")
 
-        names = get_data_from_worksheet(part, fee_type) if part != "Donations" else []
+        names = [
+            (member.name, member.phone_no)
+            for member in Members.query.filter(Members.part == part).all()
+        ]
 
         return jsonify(names=names)
     except Exception as e:
@@ -56,13 +58,14 @@ def get_tx_ref():
     try:
         logger.info(f"Generating tx_ref")
         data = request.get_json()
-        donation = bool(data.get("donation", False))
-        part = data.get("part") if not donation else "dont"
+        part = data.get("part")
+        name = data.get("name")
 
         tx_ref = Transactions.get_tx_ref(part)
+        member = Members.query.filter(Members.name == name).one_or_404()
 
         logger.info(f"TX_REF: {tx_ref}")
-        return jsonify(tx_ref=tx_ref)
+        return jsonify(tx_ref=tx_ref, member_id=member.id)
     except Exception as e:
         logger.error(traceback.format_exc())
         return jsonify(message="Error getting tx_ref", error=str(e)), 500
@@ -100,17 +103,17 @@ def add_name():
             file_upload(name_file, fee_type)
         name = form.get("name")
         part = form.get("part")
-        reg_no = form.get("reg_no")
-        if name and reg_no:
-            data = {
-                "Name": name.upper(),
-                "Reg Number": reg_no,
-                "Paid": 0,
-            }
-            if add_record(data, sheetname=part, fee_type=fee_type):
-                return jsonify(success=True)
-            raise Exception("Failed to add record")
-        return jsonify(success=True)
+        phone_no = form.get("phone_no")
+        new_member = Members(name.upper(), part, phone_no)
+        new_member.insert()
+        data = {
+            "Name": name.upper(),
+            "Phone No": phone_no,
+            "Paid": 0,
+        }
+        if add_record(data, sheetname=part, fee_type=fee_type):
+            return jsonify(success=True)
+        raise Exception("Failed to add record")
     except Exception as e:
         logger.error(traceback.format_exc())
         return jsonify(error=str(e)), 500
@@ -121,23 +124,34 @@ def add_payment():
     try:
         data = request.get_json()
         logger.info(f"ADDING PAYMENT WITH DATA: {data}")
-        part = data.get("part")
         name = data.get("name")
         amount = int(data.get("amount"))
         fee_type = data.get("fee_type")
-        reg_no = data.get("reg_no")
-        donation = bool(data.get("donation"))
+        phone_no = data.get("phone_no")
+        donation = bool(data.get("donation", False))
+        part = data.get("part") if not donation else "dont"
         tx_ref = Transactions.get_tx_ref(part)
+        member = Members.query.filter(Members.phone_no == phone_no).one_or_404()
 
-        transaction = Transactions(
-            name=name,
-            amount=amount,
-            fee_type=fee_type,
-            donation=donation,
-            reg_no=reg_no,
-            part=part,
-            tx_ref=tx_ref,
+        # create transaction record
+        transaction = (
+            Transactions(
+                member_id=member.id,
+                part=part,
+                fee_type=fee_type,
+                amount=amount,
+                tx_ref=tx_ref,
+            )
+            if not donation
+            else Transactions(
+                part=part,
+                fee_type=fee_type,
+                amount=amount,
+                tx_ref=tx_ref,
+                donation=donation,
+            )
         )
+        transaction.status = "completed"
         transaction.insert()
         logger.info(f"TX_REF: {transaction.tx_ref}")
         # update speadsheet
@@ -145,8 +159,8 @@ def add_payment():
             find_and_replace(
                 fee_type=fee_type,
                 sheetname=part,
-                identify_col="Reg Number",
-                identify_value=reg_no,
+                identify_col="Phone No",
+                identify_value=phone_no,
                 column_name="Paid",
                 new_value=amount,
             )
@@ -166,6 +180,8 @@ def add_payment():
 @csrf.exempt
 def payment_webhook():
     time.sleep(10)  # delay to avoid concurrent request with callback
+    logger.info(f"REQUEST: {request.headers.get('verif-hash')}")
+    logger.info(f"SECRET: {RAVE_SEC_KEY}")
     if request.headers.get("verif-hash") == RAVE_SEC_KEY:
         try:
             payload = request.get_json()
@@ -211,27 +227,14 @@ def payment_webhook():
                                 name = data["data"]["customer"]["name"]
                                 amount = data["data"]["amount"]
                                 fee_type = data["data"]["meta"]["fee_type"]
-                                donation = donation = (
-                                    True
-                                    if data["data"]["meta"]["donation"] == "true"
-                                    else False
-                                )
                                 part = data["data"]["meta"]["part"]
-                                reg_no = None
-                                if not donation:
-                                    name_list = get_data_from_worksheet(part, fee_type)
-                                    reg_no = [
-                                        record[1]
-                                        for record in name_list
-                                        if record[0].strip() == name.strip()
-                                    ][0]
+                                member_id = int(data["data"]["meta"]["member_id"])
+                                member = Members.query.get(member_id)
                                 tx = Transactions(
-                                    name=name,
-                                    amount=amount,
-                                    fee_type=fee_type,
-                                    donation=donation,
-                                    reg_no=reg_no,
+                                    member_id=member.id,
                                     part=part,
+                                    fee_type=fee_type,
+                                    amount=amount,
                                     tx_ref=tx_ref,
                                 )
                                 tx.insert()
@@ -241,26 +244,17 @@ def payment_webhook():
                                 tx.flw_tx_ref = flw_tx_ref
                                 tx.update()
                                 # update spreadsheet
-                                if not tx.donation:
-                                    logger.info(
-                                        f"UPDATING BALANCE FOR {name}. ADDING {amount}"
-                                    )
-                                    find_and_replace(
-                                        fee_type=fee_type,
-                                        sheetname=part,
-                                        identify_col="Reg Number",
-                                        identify_value=reg_no,
-                                        column_name="Paid",
-                                        new_value=tx.amount,
-                                    )
-                                else:
-                                    donor_data = {"Name": tx.name, "Paid": tx.amount}
-                                    add_record(
-                                        donor_data,
-                                        sheetname="Donations",
-                                        fee_type=fee_type,
-                                        donation=True,
-                                    )
+                                logger.info(
+                                    f"UPDATING BALANCE FOR {name}. ADDING {amount}"
+                                )
+                                find_and_replace(
+                                    fee_type=fee_type,
+                                    sheetname=part,
+                                    identify_col="Phone No",
+                                    identify_value=member.phone_no,
+                                    column_name="Paid",
+                                    new_value=member.amount(),
+                                )
                                 return jsonify({"success": True}), 200
                             else:
                                 tx.status = data["status"]
@@ -290,6 +284,7 @@ def payment_webhook():
 def payment_callback():
     message = "<h3>That didn't really work out 😕</h3>"
     link_mssg = "Try again?"
+    logger.info(f"SECRET: {RAVE_SEC_KEY}")
     try:
         payload = request.args
         # get transaction details from payload
@@ -322,27 +317,14 @@ def payment_callback():
                             name = data["data"]["customer"]["name"]
                             amount = data["data"]["amount"]
                             fee_type = data["data"]["meta"]["fee_type"]
-                            donation = (
-                                True
-                                if data["data"]["meta"]["donation"] == "true"
-                                else False
-                            )
                             part = data["data"]["meta"]["part"]
-                            reg_no = None
-                            if not donation:
-                                name_list = get_data_from_worksheet(part, fee_type)
-                                reg_no = [
-                                    record[1]
-                                    for record in name_list
-                                    if record[0].strip() == name.strip()
-                                ][0]
+                            member_id = int(data["data"]["meta"]["member_id"])
+                            member = Members.query.get(member_id)
                             tx = Transactions(
-                                name=name,
-                                amount=amount,
-                                fee_type=fee_type,
-                                donation=donation,
-                                reg_no=reg_no,
+                                member_id=member.id,
                                 part=part,
+                                fee_type=fee_type,
+                                amount=amount,
                                 tx_ref=tx_ref,
                             )
                             tx.insert()
@@ -352,32 +334,17 @@ def payment_callback():
                             tx.flw_tx_ref = flw_tx_ref
                             tx.update()
                             # update spreadsheet
-                            if not tx.donation:
-                                logger.info(
-                                    f"UPDATING BALANCE FOR {name}. ADDING {amount}"
-                                )
-                                total = find_and_replace(
-                                    fee_type=fee_type,
-                                    sheetname=part,
-                                    identify_col="Reg Number",
-                                    identify_value=reg_no,
-                                    column_name="Paid",
-                                    new_value=tx.amount,
-                                )
-                            else:
-                                donor_data = {"Name": tx.name, "Paid": tx.amount}
-                                add_record(
-                                    donor_data,
-                                    sheetname="Donations",
-                                    fee_type=fee_type,
-                                    donation=True,
-                                )
-
-                            message = (
-                                f"<h3>Thank you for completing the payment ❤️✨</h3><p class='h6 mb-2'>You have paid ₦{total:.2f} in total.</p>"
-                                if not donation
-                                else "<h3>Thank you for donating ❤️✨</h3>"
+                            logger.info(f"UPDATING BALANCE FOR {name}. ADDING {amount}")
+                            total = find_and_replace(
+                                fee_type=fee_type,
+                                sheetname=part,
+                                identify_col="Phone No",
+                                identify_value=member.phone_no,
+                                column_name="Paid",
+                                new_value=member.amount(),
                             )
+
+                            message = f"<h3>Thank you for completing the payment ❤️✨</h3><p class='h6 mb-2'>You have paid ₦{member.amount():.2f} in total.</p>"
                             link_mssg = "Pay again?"
                             return redirect(
                                 url_for(
@@ -419,11 +386,12 @@ def payment_callback():
             # transaction already exists
             if tx.status == "completed" or tx.status == "successful":
                 logger.info(f"PAYMENT ALREADY VERIFIED: {tx_ref}")
-                message = (
-                    "<h3>Thank you for completing the payment ❤️✨</h3>"
-                    if not tx.donation
-                    else "<h3>Thank you for donating ❤️✨</h3>"
-                )
+                total = Members.query.get(
+                    Transactions.query.filter(Transactions.tx_ref == tx_ref)
+                    .one()
+                    .member_id
+                ).amount()
+                message = f"<h3>Thank you for completing the payment ❤️✨</h3><p class='h6 mb-2'>You have paid ₦{total:.2f} in total.</p>"
                 link_mssg = "Pay again?"
             return redirect(
                 url_for("main.thanks", message=message, link_mssg=link_mssg)
