@@ -163,3 +163,7 @@ cython_debug/
 webhooks
 *.json
 shell_scripts
+*.log*
+temp_auto_push.bat
+temp_interactive_push.bat
+branch_structure.json
