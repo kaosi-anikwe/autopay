@@ -163,3 +163,4 @@ cython_debug/
 webhooks
 *.json
 shell_scripts
+*.log*

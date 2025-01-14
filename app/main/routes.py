@@ -104,7 +104,7 @@ def add_name():
         name = form.get("name")
         part = form.get("part")
         phone_no = form.get("phone_no")
-        new_member = Members(name.upper(), part, phone_no)
+        new_member = Members(name.upper(), part.lower(), phone_no)
         new_member.insert()
         data = {
             "Name": name.upper(),
@@ -131,7 +131,7 @@ def add_payment():
         donation = bool(data.get("donation", False))
         part = data.get("part") if not donation else "dont"
         tx_ref = Transactions.get_tx_ref(part)
-        member = Members.query.filter(Members.phone_no == phone_no).one_or_404()
+        member = Members.query.filter(Members.phone_no == phone_no).one_or_404() if not donation else None
 
         # create transaction record
         transaction = (
@@ -163,6 +163,7 @@ def add_payment():
                 identify_value=phone_no,
                 column_name="Paid",
                 new_value=amount,
+                replace=False,
             )
         else:
             donor_data = {"Name": name, "Paid": amount}
@@ -224,10 +225,12 @@ def payment_webhook():
                                 flw_tx_ref = data["data"]["flw_ref"]
                                 name = data["data"]["customer"]["name"]
                                 amount = data["data"]["amount"]
-                                fee_type = data["data"]["meta"]["fee_type"]
-                                part = data["data"]["meta"]["part"]
-                                member_id = int(data["data"]["meta"]["member_id"])
-                                member = Members.query.get(member_id)
+                                # fee_type = data["data"]["meta"]["fee_type"]
+                                fee_type = "fusion-cantus"
+                                # part = data["data"]["meta"]["part"]
+                                part = str(tx_ref).split("-")[0].capitalize()
+                                # member_id = int(data["data"]["meta"]["member_id"])
+                                member = Members.query.filter(Members.name == name).one()
                                 tx = Transactions(
                                     member_id=member.id,
                                     part=part,

@@ -110,6 +110,7 @@ def find_and_replace(
     identify_col: str,
     column_name: str,
     sheetname: str,
+    replace = True,
 ):
     spreadsheet = gclient.open_by_key(sheets.get(fee_type))
     # Get worksheet
@@ -138,7 +139,7 @@ def find_and_replace(
     current_value = worksheet.cell(row_index, column_index).value
 
     # Replace the value in the specified cell
-    total_value = int(new_value)
+    total_value = int(new_value) + int(current_value) if not replace else int(new_value)
     worksheet.update_cell(row_index, column_index, total_value)
     return total_value
 
