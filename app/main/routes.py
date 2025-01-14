@@ -108,10 +108,11 @@ def add_name():
         new_member.insert()
         data = {
             "Name": name.upper(),
+            "Part": part.capitalize(),
             "Phone No": phone_no,
             "Paid": 0,
         }
-        if add_record(data, sheetname=part, fee_type=fee_type):
+        if add_record(data, sheetname="FILMSTERS", fee_type=fee_type):
             return jsonify(success=True)
         raise Exception("Failed to add record")
     except Exception as e:
@@ -158,7 +159,7 @@ def add_payment():
         if not donation:
             find_and_replace(
                 fee_type=fee_type,
-                sheetname=part,
+                sheetname="FILMSTERS",
                 identify_col="Phone No",
                 identify_value=phone_no,
                 column_name="Paid",
@@ -226,7 +227,7 @@ def payment_webhook():
                                 name = data["data"]["customer"]["name"]
                                 amount = data["data"]["amount"]
                                 # fee_type = data["data"]["meta"]["fee_type"]
-                                fee_type = "fusion-cantus"
+                                fee_type = "film"
                                 # part = data["data"]["meta"]["part"]
                                 part = str(tx_ref).split("-")[0].capitalize()
                                 # member_id = int(data["data"]["meta"]["member_id"])
@@ -250,7 +251,7 @@ def payment_webhook():
                                 )
                                 find_and_replace(
                                     fee_type=fee_type,
-                                    sheetname=part,
+                                    sheetname="FILMSTERS",
                                     identify_col="Phone No",
                                     identify_value=member.phone_no,
                                     column_name="Paid",
@@ -337,7 +338,7 @@ def payment_callback():
                             logger.info(f"UPDATING BALANCE FOR {name}. ADDING {amount}")
                             total = find_and_replace(
                                 fee_type=fee_type,
-                                sheetname=part,
+                                sheetname="FILMSTERS",
                                 identify_col="Phone No",
                                 identify_value=member.phone_no,
                                 column_name="Paid",

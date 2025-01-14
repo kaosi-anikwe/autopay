@@ -226,32 +226,27 @@ def populate_db(force=False):
         return populate_sheet()
 
 
-def populate_sheet(fee_type="fusion-cantus"):
+def populate_sheet(fee_type="film", sheet="FILMSTERS"):
     logger.info("POPULATING SPREADSHEET WITH DATABASE RECORDS")
     spreadsheet = gclient.open_by_key(sheets.get(fee_type))
-    parts = ["Soprano", "Alto", "Tenor", "Bass"]
-    header = ["Name", "Phone No", "Paid"]
-    for part in parts:
-        members = Members.query.filter(Members.part == part.lower()).all()
-        if part not in [worksheet.title for worksheet in spreadsheet.worksheets()]:
-            worksheet = spreadsheet.add_worksheet(part, rows=100, cols=20)
-        else:
-            worksheet = spreadsheet.worksheet(part)
-        # clear worksheet and upload new record
-        worksheet.clear()
-        values = [[member.name, member.phone_no, member.amount()] for member in members]
-        # add header
-        logger.info(f"Updating Header: {header}")
-        worksheet.update("A1", [header])
-        # add values
-        logger.info("Adding values")
-        worksheet.update("A2", values)
-        logger.info("Done adding values")
-        # Sort the rows alphabetically based on the specified sort column
-        sort_column_index = header.index("Name") + 1
-        last_column_letter = get_last_column_letter(worksheet)
-        last_row_index = worksheet.row_count
-        worksheet.sort(
-            (sort_column_index, "asc"),
-            range=f"A2:{last_column_letter}{last_row_index}",
-        )
+    header = ["Name", "Part", "Phone No", "Paid"]
+    members = Members.query.all()
+    worksheet = spreadsheet.worksheet(sheet)
+    # clear worksheet and upload new record
+    worksheet.clear()
+    values = [[member.name, str(member.part).capitalize(), member.phone_no, member.amount()] for member in members]
+    # add header
+    logger.info(f"Updating Header: {header}")
+    worksheet.update("A1", [header])
+    # add values
+    logger.info("Adding values")
+    worksheet.update("A2", values)
+    logger.info("Done adding values")
+    # Sort the rows alphabetically based on the specified sort column
+    sort_column_index = header.index("Name") + 1
+    last_column_letter = get_last_column_letter(worksheet)
+    last_row_index = worksheet.row_count
+    worksheet.sort(
+        (sort_column_index, "asc"),
+        range=f"A2:{last_column_letter}{last_row_index}",
+    )
