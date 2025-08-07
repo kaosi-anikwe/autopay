@@ -12,4 +12,4 @@ with app.app_context():
     populate_db()
 
 if __name__ == "__main__":
-    app.run(debug=True, host=os.getenv("SERVER_NAME"), port=4000)
+    app.run(debug=True, host=os.getenv("SERVER_NAME"), port=4004)

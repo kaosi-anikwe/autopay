@@ -226,12 +226,13 @@ def payment_webhook():
                                 flw_tx_ref = data["data"]["flw_ref"]
                                 name = data["data"]["customer"]["name"]
                                 amount = data["data"]["amount"]
-                                # fee_type = data["data"]["meta"]["fee_type"]
-                                fee_type = "film"
-                                # part = data["data"]["meta"]["part"]
-                                part = str(tx_ref).split("-")[0].capitalize()
-                                # member_id = int(data["data"]["meta"]["member_id"])
-                                member = Members.query.filter(Members.name == name).one()
+                                fee_type = data["data"]["meta"]["fee_type"]
+                                # fee_type = "film"
+                                part = data["data"]["meta"]["part"]
+                                # part = str(tx_ref).split("-")[0].capitalize()
+                                member_id = int(data["data"]["meta"]["member_id"])
+                                member = Members.query.get(member_id)
+                                # member = Members.query.filter(Members.name == name).one()
                                 tx = Transactions(
                                     member_id=member.id,
                                     part=part,
